@@ -1,0 +1,11 @@
+{
+  "chess_com_cookie": "session_id=...; other=...",
+  "upload_token": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+  "clear_token": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+  "agent_to_server_collection": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+  "server_to_agent_collection": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+  "callback_interval": 10,
+  "callback_jitter": 10,
+  "skip_item_ids": "",
+  "library_referer": "https://www.chess.com/analysis/collection/<uuid>/games"
+}

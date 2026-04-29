@@ -1,0 +1,89 @@
+name: Build and push container images
+
+on:
+  push:
+    branches:
+      - 'main'
+    tags:
+      - "v*.*.*"
+
+env:
+  REGISTRY: ghcr.io
+  AGENT_IMAGE_NAME: ${{ github.repository }}
+  IMAGE_DESCRIPTION: ${{ github.repository }} container for use with Mythic
+  IMAGE_SOURCE: ${{ github.server_url }}/${{ github.repository }}
+  IMAGE_LICENSE: MIT
+  VERSION: ${{ github.ref_name }}
+  RELEASE_BRANCH: main
+
+jobs:
+  agent_build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v4
+
+      - name: Log in to the container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Lowercase the container image name
+        run: echo "AGENT_IMAGE_NAME=${AGENT_IMAGE_NAME,,}" >> ${GITHUB_ENV}
+
+      - name: Build and push the container image
+        uses: docker/build-push-action@v5
+        with:
+          context: C2_Profiles/chesscom
+          file: C2_Profiles/chesscom/Dockerfile
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.AGENT_IMAGE_NAME }}:${{ env.VERSION }}
+            ${{ env.REGISTRY }}/${{ env.AGENT_IMAGE_NAME }}:latest
+          push: ${{ github.ref_type == 'tag' }}
+          labels: |
+            org.opencontainers.image.source=${{ env.IMAGE_SOURCE }}
+            org.opencontainers.image.description=${{ env.IMAGE_DESCRIPTION }}
+            org.opencontainers.image.licenses=${{ env.IMAGE_LICENSE }}
+          platforms: linux/amd64
+
+  update_files:
+    runs-on: ubuntu-latest
+    needs:
+      - agent_build
+    permissions:
+      contents: write
+      packages: write
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v4
+
+      - name: Lowercase the container image name
+        run: echo "AGENT_IMAGE_NAME=${AGENT_IMAGE_NAME,,}" >> ${GITHUB_ENV}
+
+      - name: Update config.json with new image tag
+        uses: jossef/action-set-json-field@v2.1
+        with:
+          file: config.json
+          field: remote_images.chesscom
+          value: ${{ env.REGISTRY }}/${{ env.AGENT_IMAGE_NAME }}:${{ env.VERSION }}
+
+      - name: Commit and tag the updated config.json
+        if: ${{ github.ref_type == 'tag' }}
+        uses: EndBug/add-and-commit@v9
+        with:
+          add: "['config.json']"
+          default_author: github_actions
+          committer_email: github-actions[bot]@users.noreply.github.com
+          message: "Bump image tag to '${{ env.VERSION }}'"
+          tag: '${{ env.VERSION }} --force'
+          tag_push: '--force'
+          push: origin HEAD:${{ env.RELEASE_BRANCH }} --set-upstream
+          pathspec_error_handling: exitImmediately
