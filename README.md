@@ -59,3 +59,7 @@ Each message is prefixed with a marker FEN (`7k/8/8/8/8/8/8/7K w - - 0 1`) so th
 ## Configuration
 
 Copy `C2_Profiles/chesscom/c2_code/config.json.example` to `config.json` and fill in the values, or configure directly in the Mythic UI when creating a payload.
+
+---
+
+Just a fun project.
