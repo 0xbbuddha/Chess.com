@@ -1,5 +1,5 @@
 """
-Encodage Base5 (alphabet échecs PNBRQ) + projection en FEN, compatible avec
+Base5 encoding (chess piece alphabet PNBRQ) + FEN projection, compatible with
 CheckmateC2 / Havoc (OfficialScragg/CheckmateC2).
 """
 
@@ -7,7 +7,7 @@ from __future__ import annotations
 
 
 class Base5Chess:
-    """Port du schéma CheckmateC2 pour interopérer avec un agent qui réutilise la même logique."""
+    """Port of the CheckmateC2 encoding scheme for interoperability with agents using the same logic."""
 
     ALPHABET = "PNBRQ"
 

