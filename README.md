@@ -29,7 +29,7 @@ Each message is prefixed with a marker FEN (`7k/8/8/8/8/8/8/7K w - - 0 1`) so th
 ## Installation
 
 ```bash
-./mythic-cli install github https://github.com/0xbbuddha/chesscom-c2
+./mythic-cli install github https://github.com/0xbbuddha/Chess.com
 ```
 
 ## Parameters
