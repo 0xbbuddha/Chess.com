@@ -2,7 +2,7 @@
   <img src="documentation-c2/chesscom.png" alt="chesscom-c2 logo" width="300"/>
 </p>
 
-# chesscom-c2
+# Chess.comC2
 
 A [Mythic](https://github.com/its-a-feature/Mythic) C2 profile that uses **Chess.com library collections** as a covert channel - inspired by [CheckmateC2](https://github.com/OfficialScragg/CheckmateC2) (Havoc). Data is **Base5-encoded** (`PNBRQ` alphabet) and embedded into FEN positions, then stored as PGN games in Chess.com library collections.
 
