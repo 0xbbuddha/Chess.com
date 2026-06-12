@@ -29,14 +29,14 @@ class chesscom(C2Profile):
         ),
         C2ProfileParameter(
             name="upload_token",
-            description=’CSRF "_token" for POST .../actions/add-from-pgn’,
+            description='CSRF "_token" for POST .../actions/add-from-pgn',
             default_value="",
             parameter_type=ParameterType.String,
             required=True,
         ),
         C2ProfileParameter(
             name="clear_token",
-            description=’CSRF "_token" for POST .../actions/remove-items’,
+            description='CSRF "_token" for POST .../actions/remove-items',
             default_value="",
             parameter_type=ParameterType.String,
             required=True,
